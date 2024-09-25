@@ -1,3 +1,3 @@
-export type PluginStorage = {
-  count: number;
+export interface PluginStorage {
+  apiKey: string;
 }

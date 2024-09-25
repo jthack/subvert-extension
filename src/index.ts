@@ -1,105 +1,84 @@
 import type { Caido } from "@caido/sdk-frontend";
-
 import type { PluginStorage } from "./types";
-
 import "./styles/script.css";
 
-const Page = "/my-plugin" as const;
-const Commands = {
-  increment: "my-plugin.increment",
-  decrement: "my-plugin.decrement",
-} as const;
+const Page = "/httpql" as const;
+const API_ENDPOINT = "http://137.184.207.84:8000/api/httpql";
 
-const getCount = (caido: Caido) => {
+const getApiKey = (caido: Caido): string => {
   const storage = caido.storage.get() as PluginStorage | undefined;
+  return storage?.apiKey || "";
+};
 
-  if (storage) {
-    return storage.count;
+const setApiKey = (caido: Caido, apiKey: string) => {
+  caido.storage.set({ apiKey });
+};
+
+const fetchHttpQLResponse = async (apiKey: string, query: string): Promise<string> => {
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  return 0;
-}
-
-const increment = (caido: Caido) => {
-  const count = getCount(caido);
-  caido.storage.set({ count: count + 1 });
-}
-
-const decrement = (caido: Caido) => {
-  const count = getCount(caido);
-  caido.storage.set({ count: count - 1 });
-}
+  return await response.text();
+};
 
 const addPage = (caido: Caido) => {
-
-  const count = getCount(caido);
-
   const body = document.createElement("div");
-  body.className = "my-plugin";
+  body.className = "httpql-plugin";
   body.innerHTML = `
-    <div class="my-plugin__count">
-      <span>Count:</span>
-      <span class="my-plugin__value">${count}</span>
+    <div class="httpql-plugin__inputs">
+      <input type="password" id="api-key" placeholder="API Key" class="c-input" />
+      <textarea id="user-query" placeholder="Enter your query" class="c-input" rows="3"></textarea>
+      <button id="submit-query" class="c-button">Submit</button>
     </div>
-    <div>
-      <button class="c-button" data-command="${Commands.increment}">Increment</button>
-      <button class="c-button" data-command="${Commands.decrement}">Decrement</button>
-    </div>
+    <pre id="response-container" class="httpql-plugin__response"></pre>
   `;
 
-  const countElement = body.querySelector(".my-plugin__value") as HTMLElement;
-  const incrementButton = body.querySelector(`[data-command="${Commands.increment}"]`) as HTMLElement;
-  const decrementButton = body.querySelector(`[data-command="${Commands.decrement}"]`) as HTMLElement;
+  const apiKeyInput = body.querySelector("#api-key") as HTMLInputElement;
+  const userQueryInput = body.querySelector("#user-query") as HTMLTextAreaElement;
+  const submitButton = body.querySelector("#submit-query") as HTMLButtonElement;
+  const responseContainer = body.querySelector("#response-container") as HTMLPreElement;
 
-  caido.storage.onChange((newStorage) => {
-    const storage = newStorage as PluginStorage | undefined;
+  apiKeyInput.value = getApiKey(caido);
 
-    if (storage) {
-      countElement.innerHTML = `${storage.count}`;
+  apiKeyInput.addEventListener("change", () => {
+    setApiKey(caido, apiKeyInput.value);
+  });
+
+  submitButton.addEventListener("click", async () => {
+    const apiKey = apiKeyInput.value;
+    const query = userQueryInput.value;
+
+    if (!apiKey || !query) {
+      responseContainer.textContent = "Please enter both API key and query.";
       return;
+    }
+
+    try {
+      responseContainer.textContent = "Loading...";
+      const response = await fetchHttpQLResponse(apiKey, query);
+      responseContainer.textContent = response;
+    } catch (error) {
+      responseContainer.textContent = `Error: ${error.message}`;
     }
   });
 
-  incrementButton.addEventListener("click", () => {
-    increment(caido);
-  });
-
-  decrementButton.addEventListener("click", () => {
-    decrement(caido);
-  });
-
-  caido.navigation.addPage(Page, {
-    body,
-  });
-}
-
+  caido.navigation.addPage(Page, { body });
+};
 
 export const init = (caido: Caido) => {
-
-  // Register commands
-  // Commands are registered with a unique identifier and a handler function
-  // The run function is called when the command is executed
-  // These commands can be registered in various places like command palette, context menu, etc.
-  caido.commands.register(Commands.increment, {
-    name: "Increment",
-    run: () => increment(caido),
-  });
-
-  caido.commands.register(Commands.decrement, {
-    name: "Decrement",
-    run: () => decrement(caido),
-  });
-
-  // Register command palette items
-  caido.commandPalette.register(Commands.increment);
-  caido.commandPalette.register(Commands.decrement);
-
-  // Register page
   addPage(caido);
 
-  // Register sidebar
-  caido.sidebar.registerItem("My plugin", Page, {
-    icon: "fas fa-rocket",
+  caido.sidebar.registerItem("HTTPQL", Page, {
+    icon: "fas fa-terminal",
   });
-}
-
+};
