@@ -1,13 +1,16 @@
+import { createApp, ref } from 'vue';
+import CommandPalette from './CommandPalette.vue';
 import type { Caido } from "@caido/sdk-frontend";
 import type { PluginStorage } from "./types";
 import "./styles/script.css";
 
 const Page = "/httpql" as const;
 const API_ENDPOINT = "http://137.184.207.84:8000/api/httpql";
+const TEST_API_KEY = "";
 
 const getApiKey = (caido: Caido): string => {
-  const storage = caido.storage.get() as PluginStorage | undefined;
-  return storage?.apiKey || "";
+  // Use the hardcoded API key for testing
+  return TEST_API_KEY;
 };
 
 const setApiKey = (caido: Caido, apiKey: string) => {
@@ -15,6 +18,7 @@ const setApiKey = (caido: Caido, apiKey: string) => {
 };
 
 const fetchHttpQLResponse = async (apiKey: string, query: string): Promise<string> => {
+  console.log(`Fetching HTTPQL response for query: ${query}`);
   const response = await fetch(API_ENDPOINT, {
     method: "POST",
     headers: {
@@ -28,55 +32,41 @@ const fetchHttpQLResponse = async (apiKey: string, query: string): Promise<strin
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  return await response.text();
+  const text = await response.text();
+  console.log(`Received response: ${text}`);
+  return text;
 };
 
-const addPage = (caido: Caido) => {
-  const body = document.createElement("div");
-  body.className = "httpql-plugin";
-  body.innerHTML = `
-    <div class="httpql-plugin__inputs">
-      <input type="password" id="api-key" placeholder="API Key" class="c-input" />
-      <textarea id="user-query" placeholder="Enter your query" class="c-input" rows="3"></textarea>
-      <button id="submit-query" class="c-button">Submit</button>
-    </div>
-    <pre id="response-container" class="httpql-plugin__response"></pre>
-  `;
+const spawnCommandPaletteUI = (caido: Caido) => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
 
-  const apiKeyInput = body.querySelector("#api-key") as HTMLInputElement;
-  const userQueryInput = body.querySelector("#user-query") as HTMLTextAreaElement;
-  const submitButton = body.querySelector("#submit-query") as HTMLButtonElement;
-  const responseContainer = body.querySelector("#response-container") as HTMLPreElement;
+  const closePalette = () => {
+    console.log("Closing palette");
+    app.unmount();
+    document.body.removeChild(container);
+  };
 
-  apiKeyInput.value = getApiKey(caido);
+  const app = createApp(CommandPalette, { caido, fetchHttpQLResponse, getApiKey, setApiKey, closePalette });
+  app.mount(container);
 
-  apiKeyInput.addEventListener("change", () => {
-    setApiKey(caido, apiKeyInput.value);
-  });
-
-  submitButton.addEventListener("click", async () => {
-    const apiKey = apiKeyInput.value;
-    const query = userQueryInput.value;
-
-    if (!apiKey || !query) {
-      responseContainer.textContent = "Please enter both API key and query.";
-      return;
+  // Listen for the Escape key to close the palette
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      closePalette();
+      document.removeEventListener('keydown', handleKeydown);
     }
+  };
 
-    try {
-      responseContainer.textContent = "Loading...";
-      const response = await fetchHttpQLResponse(apiKey, query);
-      responseContainer.textContent = response;
-    } catch (error) {
-      responseContainer.textContent = `Error: ${error.message}`;
-    }
-  });
-
-  caido.navigation.addPage(Page, { body });
+  document.addEventListener('keydown', handleKeydown);
 };
 
 export const init = (caido: Caido) => {
-  addPage(caido);
+  caido.commands.register("httpql-command", {
+    name: "HTTPQL Command Palette",
+    run: () => spawnCommandPaletteUI(caido),
+    group: "Custom Commands",
+  });
 
   caido.sidebar.registerItem("HTTPQL", Page, {
     icon: "fas fa-terminal",
