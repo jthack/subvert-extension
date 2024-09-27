@@ -1,7 +1,7 @@
 {
-  "name": "starterkit-plugin",
+  "name": "subvert-frontend-plugin",
   "version": "0.1.0",
-  "description": "StarterKit plugin for Caido",
+  "description": "Subvert Frontend Plugin for Caido",
   "author": "Caido Labs Inc. <dev@caido.io>",
   "license": "CC0-1.0",
   "type": "module",

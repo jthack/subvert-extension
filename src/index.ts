@@ -1,4 +1,5 @@
 import { createApp, ref } from 'vue';
+import SubvertUIComponent from './SubvertUIComponent.vue';
 import CommandPalette from './CommandPalette.vue';
 import type { Caido } from "@caido/sdk-frontend";
 import type { PluginStorage } from "./types";
@@ -6,7 +7,7 @@ import "./styles/script.css";
 
 const Page = "/httpql" as const;
 const API_ENDPOINT = "http://137.184.207.84:8000/api/httpql";
-const TEST_API_KEY = "";
+const TEST_API_KEY = "test_api_key_123rez0";
 
 const getApiKey = (caido: Caido): string => {
   // Use the hardcoded API key for testing
@@ -61,14 +62,31 @@ const spawnCommandPaletteUI = (caido: Caido) => {
   document.addEventListener('keydown', handleKeydown);
 };
 
+const addPage = (caido: Caido) => {
+  const app = createApp(SubvertUIComponent, { caido });
+  
+  const container = document.createElement('div');
+  app.mount(container);
+  const card = caido.ui.card({
+    body: container,
+  });
+
+  // Create plugin page in left tab menu.
+  caido.navigation.addPage(Page, {
+    body: card,
+  });
+  caido.sidebar.registerItem("Subvert", Page, {
+    icon: "fas fa-terminal",
+  });
+  console.log("Mounted app");
+};
+
 export const init = (caido: Caido) => {
   caido.commands.register("httpql-command", {
     name: "HTTPQL Command Palette",
     run: () => spawnCommandPaletteUI(caido),
     group: "Custom Commands",
   });
+  addPage(caido);
 
-  caido.sidebar.registerItem("HTTPQL", Page, {
-    icon: "fas fa-terminal",
-  });
 };

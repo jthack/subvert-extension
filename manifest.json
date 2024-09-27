@@ -1,18 +1,18 @@
 {
-  "id": "starterkit-plugin",
-  "name": "StarterKit Plugin",
+  "id": "subvert-frontend-plugin",
+  "name": "Subvert Frontend Plugin",
   "version": "0.1.0",
-  "description": "This is a starterkit plugin",
+  "description": "Subvert Frontend Plugin for Caido",
   "author": {
     "name": "Caido Labs Inc.",
     "email": "dev@caido.io",
-    "url": "https://github.com/caido/starterkit-plugin"
+    "url": "https://github.com/jthack/subvert-extension"
   },
   "plugins": [
     {
       "kind": "frontend",
-      "id": "caido-extra-commands",
-      "name": "Extra Commands",
+      "id": "subvert-frontend",
+      "name": "Frontend",
       "entrypoint": "frontend/script.js",
       "style": "frontend/style.css"
     }
