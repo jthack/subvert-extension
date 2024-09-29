@@ -5,8 +5,8 @@ import type { Caido } from "@caido/sdk-frontend";
 import type { PluginStorage } from "./types";
 import "./styles/script.css";
 
-const Page = "/httpql" as const;
-const API_ENDPOINT = "http://137.184.207.84:8000/api/httpql";
+const Page = "/subvert" as const;
+const API_ENDPOINT = "http://137.184.207.84:8000/api/subvert";
 const TEST_API_KEY = "test_api_key_123rez0";
 
 const getApiKey = (caido: Caido): string => {
@@ -18,8 +18,8 @@ const setApiKey = (caido: Caido, apiKey: string) => {
   caido.storage.set({ apiKey });
 };
 
-const fetchHttpQLResponse = async (apiKey: string, query: string): Promise<string> => {
-  console.log(`Fetching HTTPQL response for query: ${query}`);
+const fetchSubvertResponse = async (apiKey: string, query: string): Promise<string> => {
+  console.log(`Fetching Subvert response for query: ${query}`);
   const response = await fetch(API_ENDPOINT, {
     method: "POST",
     headers: {
@@ -48,7 +48,7 @@ const spawnCommandPaletteUI = (caido: Caido) => {
     document.body.removeChild(container);
   };
 
-  const app = createApp(CommandPalette, { caido, fetchHttpQLResponse, getApiKey, setApiKey, closePalette });
+  const app = createApp(CommandPalette, { caido, fetchSubvertResponse, getApiKey, setApiKey, closePalette });
   app.mount(container);
 
   // Listen for the Escape key to close the palette
@@ -63,7 +63,7 @@ const spawnCommandPaletteUI = (caido: Caido) => {
 };
 
 const addPage = (caido: Caido) => {
-  const app = createApp(SubvertUIComponent, { caido });
+  const app = createApp(SubvertUIComponent, { caido:caido });
   
   const container = document.createElement('div');
   app.mount(container);
@@ -82,11 +82,12 @@ const addPage = (caido: Caido) => {
 };
 
 export const init = (caido: Caido) => {
-  caido.commands.register("httpql-command", {
-    name: "HTTPQL Command Palette",
+  caido.commands.register("subvert-command", {
+    name: "Subvert Command Palette",
     run: () => spawnCommandPaletteUI(caido),
     group: "Custom Commands",
   });
+  caido.commandPalette.register("subvert-command", "Subvert Command Palette");
   addPage(caido);
 
 };
