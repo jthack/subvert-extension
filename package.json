@@ -1,7 +1,7 @@
 {
-  "name": "starterkit-plugin",
+  "name": "subvert-frontend-plugin",
   "version": "0.1.0",
-  "description": "StarterKit plugin for Caido",
+  "description": "Subvert Frontend Plugin for Caido",
   "author": "Caido Labs Inc. <dev@caido.io>",
   "license": "CC0-1.0",
   "type": "module",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@caido/sdk-frontend": "0.37.0",
     "@vitejs/plugin-vue": "^5.1.4",
+    "@vueuse/core": "^11.1.0",
     "vue": "^3.5.9",
     "vue-command-palette": "^0.2.3"
   },
