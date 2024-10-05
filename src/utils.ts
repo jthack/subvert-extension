@@ -89,4 +89,3 @@ export const getCurrentlySelectedReplayTabSessionId = () => {
     const activeTab = document.querySelector(".c-tab[data-is-selected=\"true\"]");
     return activeTab ? activeTab.getAttribute("data-session-id") : '';
 };
-

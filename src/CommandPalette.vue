@@ -44,6 +44,8 @@
 import { ref, watch, computed } from 'vue';
 import { onKeyStroke } from "@vueuse/core";
 import { Command } from 'vue-command-palette';
+import { getCurrentReplayEditors } from './utils';
+import { getCommandDefinitions } from './commands';
 
 interface Props {
   caido: object;
@@ -58,128 +60,26 @@ const queryResult = ref('');
 const isPaletteOpen = ref(true);
 var command = null
 
-const fetchSubvertResponse = async (apiKey: string, query: string, request: string, response: string, requestSelectedText: string, responseSelectedText: string) => {
-  try {
-    const serverResponse = await fetch('https://poc.rhynorater.com/subvertQuery.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ query, request, response, requestSelectedText, responseSelectedText }),
-    });
-    if (serverResponse.ok) {
-      const data = await serverResponse.json();
-      return data;
-    } else {
-      throw new Error('Unable to process query');
-    }
-  } catch (error) {
-    console.error('Error querying Subvert:', error);
-    throw error;
-  }
-};
+
 
 const commands = computed(() => {
   console.log("Computing commands. Query input:", queryInput.value);
-  const commandDefinitions = [
-    {
-      id: 'httpql-suggest',
-      name: `httpql: ${queryInput.value.replace(/^h(t(t(p(q(l(:)?)?)?)?)?)?/i, '')}`,
-      autoComplete: "httpql:",
-      regex: /^(h(t(t(p(q(l(:(.*)?)?)?)?)?)?)?)?$/i,
-      shortcut: [],
-      perform: async () => {
-          const apiKey = props.getApiKey(props.caido);
-          const response = await fetchSubvertHTTPQLResponse(apiKey, queryInput.value);
-          queryResult.value = response.trim();
-          console.log(`Query executed successfully, response: ${queryResult.value}`);
-
-          const cmLineDiv = document.querySelector('.cm-line');
-          if (cmLineDiv) {
-            cmLineDiv.innerHTML = `<pre>${queryResult.value}</pre>`;
-          }
-        },
-    }
-  ]
-  let definedCommands = commandDefinitions.filter(cmd => cmd.autoComplete).map(cmd => cmd.autoComplete);
+  const commandDefinitions = getCommandDefinitions(queryInput.value, props.caido, props.getApiKey);
+  let commandNames = commandDefinitions.filter(cmd => cmd.autoComplete).map(cmd => cmd.autoComplete);
   let realCommands = [];
   commandDefinitions.forEach(cmd => {
-    if (cmd.regex && cmd.regex.test(queryInput.value)) {
+    if (!cmd.regex || (cmd.regex && cmd.regex.test(queryInput.value))) {
       realCommands.push(cmd);
-    }else{
+    } else {
       console.log("Command not matched:", cmd.name, "Regex:", cmd.regex, "Query input:", queryInput.value);
     }
   });
-  console.log(definedCommands, queryInput.value, !definedCommands.some(cmd => queryInput.value.toLowerCase().startsWith(cmd)));
-  if (!definedCommands.some(cmd => queryInput.value.toLowerCase().startsWith(cmd))) {
-    realCommands.push({
-      id: 'query-subvert',
-      name: `Subvert query: ${queryInput.value}`,
-      perform: async () => {
-        console.log("Performing query-subvert command");
-        console.log("Get Selected Text", props.caido.window.getActiveEditor()?.getSelectedText())
-        const { request, response, requestEditor, responseEditor,requestSelectedText, responseSelectedText } = getCurrentReplayEditors();
-        const apiKey = props.getApiKey(props.caido);
-        const serverResponse = await fetchSubvertResponse(apiKey, queryInput.value, request, response, requestSelectedText, responseSelectedText);
-        console.log("Subvert response:", serverResponse);
-        props.caido.window.getActiveEditor()?.replaceSelectedText(serverResponse.response);
-      }
-    });
+  console.log(commandNames, queryInput.value, !commandNames.some(cmd => queryInput.value.toLowerCase().startsWith(cmd)));
+  if (commandNames.some(cmd => queryInput.value.toLowerCase().startsWith(cmd))) {
+    realCommands = realCommands.filter(com => queryInput.value.toLowerCase().startsWith(com.autoComplete));
   }
   return realCommands;
 });
-
-const getCurrentReplayEditors = (): {
-  requestEditor: any;
-  responseEditor: any;
-  request: string | undefined;
-  response: string | undefined;
-  requestSelectedText: string | undefined;
-  responseSelectedText: string | undefined;
-  focusedEditor: any;
-  focusedEditorText: string | undefined;
-  focusedEditorSelectedText: string | undefined;
-} => {
-  if (window.location.hash.split("?")[0] !== '#/replay') {
-    return {
-      requestEditor: undefined,
-      responseEditor: undefined,
-      request: undefined,
-      response: undefined,
-      requestSelectedText: undefined,
-      responseSelectedText: undefined,
-      focusedEditor: undefined,
-      focusedEditorText: undefined,
-      focusedEditorSelectedText: undefined
-    };
-  }
-
-  const requestEditor = document.querySelector('.c-request__body .cm-content')?.cmView?.view;
-  const responseEditor = document.querySelector('.c-response__body .cm-content')?.cmView?.view;
-  const focusedEditor = document.querySelector('.cm-editor.cm-focused .cm-content')?.cmView?.view;
-
-  const getSelectedText = (editor: any) => {
-    if (editor) {
-      const {from, to} = editor.state.selection.main;
-      return editor.state.sliceDoc(from, to);
-    }
-    return undefined;
-  };
-
-  return {
-    requestEditor,
-    responseEditor,
-    request: requestEditor?.state.doc.toString(),
-    response: responseEditor?.state.doc.toString(),
-    requestSelectedText: getSelectedText(requestEditor),
-    responseSelectedText: getSelectedText(responseEditor),
-    focusedEditor,
-    focusedEditorText: focusedEditor?.state.doc.toString(),
-    focusedEditorSelectedText: getSelectedText(focusedEditor)
-  };
-};
-
 
 const onSelect = (command: any) => {
   console.log("Selecting command:", command);
