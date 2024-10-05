@@ -18,7 +18,8 @@
     "useDefineForClassFields": true,
     "isolatedModules": true,
 
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": ["@caido/sdk-frontend"]
   },
   "include": ["./src/**/*.ts"]
 }
