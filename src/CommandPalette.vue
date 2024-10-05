@@ -185,9 +185,9 @@ const onSelect = (command: any) => {
   console.log("Selecting command:", command);
   const commandid = document.querySelector('[command-item][aria-selected="true"]')?.getAttribute("commandid");
   let callback = commands.value.find(cmd => cmd.id === commandid)?.perform;
+  callback();
   queryInput.value = "";
   isPaletteOpen.value = false;
-  callback();
 };
 
 onKeyStroke("Enter", (e) => {
