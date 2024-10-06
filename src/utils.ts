@@ -89,3 +89,19 @@ export const getCurrentlySelectedReplayTabSessionId = () => {
     const activeTab = document.querySelector(".c-tab[data-is-selected=\"true\"]");
     return activeTab ? activeTab.getAttribute("data-session-id") : '';
 };
+export const sendCurrentReplayTab = () => {
+    const sendButton = document.querySelector('.c-send-request-button button');
+    if (sendButton instanceof HTMLElement) {
+        sendButton.click();
+    } else {
+        console.error('Send request button not found');
+    }
+};
+export const switchToReplayTab = (sessionId: string) => {//This doesn't work
+    const targetTab = document.querySelector(`.c-tab[data-session-id="${sessionId}"]`);
+    if (targetTab instanceof HTMLElement) {
+        targetTab.click();
+    } else {
+        console.error(`Replay tab with session ID ${sessionId} not found`);
+    }
+};

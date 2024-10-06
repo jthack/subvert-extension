@@ -1,4 +1,4 @@
-import { getCurrentReplayEditors, getCurrentTab, getHttpqlBar, setHttpqlBar, getCurrentlySelectedReplayTabSessionId, renameReplayTab } from "./utils";
+import { getCurrentReplayEditors, getCurrentTab, getHttpqlBar, setHttpqlBar, getCurrentlySelectedReplayTabSessionId, sendCurrentReplayTab} from "./utils";
 
 enum ActiveEntity {
   ReplayRequest = 'replayRequest',
@@ -37,6 +37,9 @@ const actionFunctions = {
   },
   renameReplayTab: (caido: any, newName: string, sessionId?: string) => {
     caido.graphql.renameReplaySession({id: sessionId || getCurrentlySelectedReplayTabSessionId(), name: newName});
+  },
+  sendReplayTab: (caido: any) => {
+    sendCurrentReplayTab();
   }
 };
 
