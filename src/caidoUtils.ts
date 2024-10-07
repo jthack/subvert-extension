@@ -97,11 +97,25 @@ export const sendCurrentReplayTab = () => {
         console.error('Send request button not found');
     }
 };
-export const switchToReplayTab = (sessionId: string) => {//This doesn't work
-    const targetTab = document.querySelector(`.c-tab[data-session-id="${sessionId}"]`);
+export const switchToReplayTab = (sessionId: string) => {
+    const targetTab = document.querySelector(`[data-session-id="${sessionId}"] .c-tree-item__item`);
     if (targetTab instanceof HTMLElement) {
-        targetTab.click();
+        targetTab.dispatchEvent(new MouseEvent("mousedown"));
     } else {
-        console.error(`Replay tab with session ID ${sessionId} not found`);
+        console.error(`Tab with session ID "${sessionId}" not found`);
     }
+};
+export const switchToReplayTabByName = (name: string) => {
+    const allTabs = document.querySelectorAll('.c-tree-session');
+    for (const tab of allTabs) {
+        const labelElement = tab.querySelector('.c-label__label');
+        if (labelElement && labelElement.textContent === name) {
+            const clickableItem = tab.querySelector('.c-tree-item__item');
+            if (clickableItem instanceof HTMLElement) {
+                clickableItem.dispatchEvent(new MouseEvent("mousedown"));
+                return;
+            }
+        }
+    }
+    console.error(`Tab with name "${name}" not found`);
 };

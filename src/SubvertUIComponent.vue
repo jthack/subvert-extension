@@ -28,15 +28,19 @@ export default defineComponent({
     caido: {
       type: Object as () => Caido,
       required: true
+    },
+    apiEndpoint: {
+      type: String,
+      required: true
     }
   },
   setup(props) {
-    const apiKey = ref('');
+    const apiKey = ref('testApiKey');
     const isApiKeyValid = ref(false);
 
     const validateApiKey = async (key: string): Promise<boolean> => {
       try {
-        const response = await fetch('https://poc.rhynorater.com/validate.php', {
+        const response = await fetch(props.apiEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -71,7 +75,7 @@ export default defineComponent({
       // Load the API key from storage when the component is created
       const storage = await props.caido.storage.get();
       console.log("Storage:", storage);
-      if (storage.apiKey) {
+      if (storage && storage.apiKey) {
         apiKey.value = storage.apiKey;
         isApiKeyValid.value = await validateApiKey(storage.apiKey);
       }

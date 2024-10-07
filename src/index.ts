@@ -1,69 +1,18 @@
 import { createApp, ref } from 'vue';
 import SubvertUIComponent from './SubvertUIComponent.vue';
-import CommandPalette from './CommandPalette.vue';
+import FloatingTextArea from './FloatingTextArea.vue';
+import { actionFunctions } from "./commands";
 import type { Caido } from "@caido/sdk-frontend";
-import type { PluginStorage } from "./types";
+import { ActiveEntity } from "./types";
 import "./styles/script.css";
 
 const Page = "/subvert" as const;
-const API_ENDPOINT = "http://137.184.207.84:8000/api/subvert";
-const TEST_API_KEY = "test_api_key_123rez0";
-
-const getApiKey = (caido: Caido): string => {
-  // Use the hardcoded API key for testing
-  return TEST_API_KEY;
-};
-
-const setApiKey = (caido: Caido, apiKey: string) => {
-  caido.storage.set({ apiKey });
-};
-
-const fetchSubvertResponse = async (apiKey: string, query: string): Promise<string> => {
-  console.log(`Fetching Subvert response for query: ${query}`);
-  const response = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-    },
-    body: JSON.stringify({ query }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const text = await response.text();
-  console.log(`Received response: ${text}`);
-  return text;
-};
-
-const spawnCommandPaletteUI = (caido: Caido) => {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  const closePalette = () => {
-    console.log("Closing palette");
-    app.unmount();
-    document.body.removeChild(container);
-  };
-
-  const app = createApp(CommandPalette, { caido, fetchSubvertResponse, getApiKey, setApiKey, closePalette });
-  app.mount(container);
-
-  // Listen for the Escape key to close the palette
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      closePalette();
-      document.removeEventListener('keydown', handleKeydown);
-    }
-  };
-
-  document.addEventListener('keydown', handleKeydown);
-};
+const PROD_API_ENDPOINT = "http://137.184.207.84:8000/api/subvert";
+const DEV_API_ENDPOINT = "https://poc.rhynorater.com/subvertQuery.php";
+const API_ENDPOINT = window.name === "dev" ? DEV_API_ENDPOINT : PROD_API_ENDPOINT;
 
 const addPage = (caido: Caido) => {
-  const app = createApp(SubvertUIComponent, { caido:caido });
+  const app = createApp(SubvertUIComponent, { caido:caido, apiEndpoint: API_ENDPOINT });
   
   const container = document.createElement('div');
   app.mount(container);
@@ -81,13 +30,79 @@ const addPage = (caido: Caido) => {
   console.log("Mounted app");
 };
 
+
+function handleServerResponse(caido: any, actions: any[]) {
+  actions.forEach(action => {
+    const actionFunction = actionFunctions[action.name];
+    if (actionFunction) {
+      actionFunction(caido, ...action.parameters);
+    } else {
+      console.error(`Unknown action: ${action.name}`);
+    }
+  });
+}
+
+const fetchSubvertResponse = async (apiKey: string, query: string, activeEntity: ActiveEntity, context: any) => {
+  try {
+    const serverResponse = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ query, activeEntity, context }),
+    });
+    if (serverResponse.ok) {
+      const data = await serverResponse.json();
+      return data;
+    } else {
+      throw new Error('Unable to process query');
+    }
+  } catch (error) {
+    console.error('Error querying Subvert:', error);
+    throw error;
+  }
+};
+
+const spawnCommandInterfaceUI = (caido: Caido) => {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const handleSubmit = async (text: string, activeEntity: ActiveEntity, context: any) => {
+    console.log("Submitted text:", text);
+    const apiKey = await caido.storage.get("apiKey");
+    try {
+      const response = await fetchSubvertResponse(apiKey, text, activeEntity, context);
+      console.log("Subvert response:", response);
+      caido.window.showToast("Taking following actions: " + response.actions.map((action: any) => action.name).join(", "), { duration: 5000, variant: "success" });
+      handleServerResponse(caido, response.actions);
+    } catch (error) {
+      caido.window.showToast(`Failed to fetch Subvert response: ${error}`, { duration: 5000, variant: "error" });
+    }
+    closeInterface();
+  };
+
+  const closeInterface = () => {
+    console.log("Closing command interface");
+    app.unmount();
+    document.body.removeChild(container);
+  };
+
+  const app = createApp(FloatingTextArea, {
+    onSubmit: handleSubmit,
+    onClose: closeInterface,
+    caido: caido,
+  });
+  app.mount(container);
+};
+
 export const init = (caido: Caido) => {
-  caido.commands.register("subvert-command", {
-    name: "Subvert Command Palette",
-    run: () => spawnCommandPaletteUI(caido),
+  caido.storage.set("apiKey", "test");
+  caido.commands.register("subvert-floating-command", {
+    name: "Subvert Floating Command",
+    run: () => spawnCommandInterfaceUI(caido),
     group: "Custom Commands",
   });
-  caido.commandPalette.register("subvert-command", "Subvert Command Palette");
+  caido.commandPalette.register("subvert-floating-command", "Subvert Floating Command");
   addPage(caido);
-
 };
