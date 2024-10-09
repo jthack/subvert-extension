@@ -8,7 +8,7 @@
       ref="textarea"
       class="subvert-textarea"
       v-model="text"
-      :placeholder="placeholderText"
+      :placeholder="placeholder"
       @keydown.esc.prevent="close"
       @focus="refreshContext"
       autofocus
@@ -34,7 +34,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { onKeyStroke } from "@vueuse/core";
 import { getSubvertContext } from './subvertUtils';
 import type { Caido } from "@caido/sdk-frontend";
-import { ActiveEntity } from './types';
+import { ActiveEntity } from './constants';
 
 const props = defineProps<{
   onSubmit: (text: string, activeEntity: ActiveEntity, context: any) => void;
@@ -43,8 +43,10 @@ const props = defineProps<{
 }>();
 
 const text = ref('');
+const firstRun = ref(true);
+const placeholderText = 'Query subvert...';
 const context = ref(getSubvertContext(props.caido));
-const placeholderText = ref('Enter your command...');
+const placeholder = ref(placeholderText);
 const position = ref({ x: 100, y: 100 });
 const size = ref({ width: 500, height: 200 });
 const isDragging = ref(false);
@@ -56,6 +58,7 @@ const commandHistory = ref<string[]>([]);
 let historyIndex = -1;
 
 const refreshContext = () => {
+  if (firstRun.value) { firstRun.value = false; return }
   context.value = getSubvertContext(props.caido);
 };
 
@@ -84,7 +87,7 @@ const submit = () => {
     props.onSubmit(text.value, context.value.activeEntity, context.value.context);
     text.value = '';
     historyIndex = -1;
-    placeholderText.value = 'Enter your command...';
+    placeholder.value = placeholderText;
   }
 };
 
@@ -148,7 +151,7 @@ const scrollHistory = (direction: number) => {
     if (historyIndex < 0) historyIndex = 0;
     if (historyIndex >= commandHistory.value.length) historyIndex = commandHistory.value.length - 1;
     if (commandHistory.value[historyIndex]) {
-      placeholderText.value = commandHistory.value[historyIndex];
+      placeholder.value = commandHistory.value[historyIndex];
     }
   }
 };
@@ -156,7 +159,6 @@ const scrollHistory = (direction: number) => {
 onMounted(() => {
   textarea.value?.focus();
   loadCommandHistory();
-  refreshContext();
 });
 
 onKeyStroke("Enter", (e) => {
@@ -188,16 +190,16 @@ onKeyStroke("ArrowDown", (e) => {
 });
 
 onKeyStroke("Tab", (e) => {
-  if (e.target === textarea.value && text.value.trim() === '' && historyIndex >= 0 && placeholderText.value !== 'Enter your command...') {
+  if (e.target === textarea.value && text.value.trim() === '' && historyIndex >= 0 && placeholder.value !== placeholderText) {
     e.preventDefault();
-    text.value = placeholderText.value;
-    placeholderText.value = 'Enter your command...';
+    text.value = placeholder.value;
+    placeholder.value = placeholderText;
   }
 });
 
 watch(text, (newValue) => {
   if (newValue.trim() === '') {
-    placeholderText.value = 'Enter your command...';
+    placeholder.value = placeholderText;
     historyIndex = -1;
   }
 });

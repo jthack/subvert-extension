@@ -29,3 +29,7 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.hidden {
+  display: none;
+}

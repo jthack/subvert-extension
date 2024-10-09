@@ -1,15 +1,12 @@
 import { createApp, ref } from 'vue';
 import SubvertUIComponent from './SubvertUIComponent.vue';
 import FloatingTextArea from './FloatingTextArea.vue';
-import { actionFunctions } from "./commands";
 import type { Caido } from "@caido/sdk-frontend";
-import { ActiveEntity } from "./types";
+import { ActiveEntity, API_ENDPOINT, PAGE } from "./constants";
+import { handleServerResponse, fetchSubvertResponse } from "./subvertUtils";
 import "./styles/script.css";
 
-const Page = "/subvert" as const;
-const PROD_API_ENDPOINT = "http://137.184.207.84:8000/api/subvert";
-const DEV_API_ENDPOINT = "https://poc.rhynorater.com/subvertQuery.php";
-const API_ENDPOINT = window.name === "dev" ? DEV_API_ENDPOINT : PROD_API_ENDPOINT;
+const isSubvertOpen = ref(false);
 
 const addPage = (caido: Caido) => {
   const app = createApp(SubvertUIComponent, { caido:caido, apiEndpoint: API_ENDPOINT });
@@ -21,51 +18,36 @@ const addPage = (caido: Caido) => {
   });
 
   // Create plugin page in left tab menu.
-  caido.navigation.addPage(Page, {
+  caido.navigation.addPage(PAGE, {
     body: card,
   });
-  caido.sidebar.registerItem("Subvert", Page, {
+  caido.sidebar.registerItem("Subvert", PAGE, {
     icon: "fas fa-terminal",
   });
   console.log("Mounted app");
 };
 
 
-function handleServerResponse(caido: any, actions: any[]) {
-  actions.forEach(action => {
-    const actionFunction = actionFunctions[action.name];
-    if (actionFunction) {
-      actionFunction(caido, ...action.parameters);
-    } else {
-      console.error(`Unknown action: ${action.name}`);
-    }
-  });
-}
 
-const fetchSubvertResponse = async (apiKey: string, query: string, activeEntity: ActiveEntity, context: any) => {
-  try {
-    const serverResponse = await fetch(API_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ query, activeEntity, context }),
-    });
-    if (serverResponse.ok) {
-      const data = await serverResponse.json();
-      return data;
-    } else {
-      throw new Error('Unable to process query');
-    }
-  } catch (error) {
-    console.error('Error querying Subvert:', error);
-    throw error;
-  }
-};
 
 const spawnCommandInterfaceUI = (caido: Caido) => {
+  if (isSubvertOpen.value) {
+    // If the interface is already open, toggle its visibility
+    const existingInterface = document.querySelector('.subvert-floating-interface');
+    if (existingInterface) {
+      if (existingInterface.classList.contains('hidden')) {
+        existingInterface.classList.remove('hidden');
+        document.querySelector('.subvert-textarea')?.focus();
+      } else {
+        existingInterface.classList.add('hidden');
+        caido.window.getActiveEditor()?.focus();
+      }
+      return; // Exit the function early as we've toggled visibility
+    }
+  }
+  isSubvertOpen.value = true;
   const container = document.createElement('div');
+  container.classList.add('subvert-floating-interface');
   document.body.appendChild(container);
 
   const handleSubmit = async (text: string, activeEntity: ActiveEntity, context: any) => {
@@ -84,9 +66,11 @@ const spawnCommandInterfaceUI = (caido: Caido) => {
 
   const closeInterface = () => {
     console.log("Closing command interface");
+    isSubvertOpen.value = false;
     app.unmount();
     document.body.removeChild(container);
   };
+
 
   const app = createApp(FloatingTextArea, {
     onSubmit: handleSubmit,
@@ -97,12 +81,14 @@ const spawnCommandInterfaceUI = (caido: Caido) => {
 };
 
 export const init = (caido: Caido) => {
+  
   caido.storage.set("apiKey", "test");
-  caido.commands.register("subvert-floating-command", {
+  caido.commands.register("subvert.floating", {
     name: "Subvert Floating Command",
     run: () => spawnCommandInterfaceUI(caido),
-    group: "Custom Commands",
+    group: "Subvert",
   });
-  caido.commandPalette.register("subvert-floating-command", "Subvert Floating Command");
+  caido.commandPalette.register("subvert.floating", "Subvert Floating Command");
+  caido.shortcuts.register("subvert.floating", ["⌃", "⇧", "K"]);
   addPage(caido);
 };
